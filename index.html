@@ -67,21 +67,19 @@
     <body>
         <div class="header-container">
             <div class="header-content">
-              <h1>DINeMo: Learning Neural Mesh Models<br/>with no 3D Annotations</h1>
-              <h3>Technical Report</h3>
+              <h1>DINeMo: Learning Neural Mesh Models with no 3D Annotations</h1>
+              <h3>CVPR 2025 C3DV Workshop</h3>
               <p>
                 <a href="https://richard-guofeng-zhang.github.io" target="_blank" style="text-decoration: none;"><b>Weijie Guo</b></a> &emsp;
                 <a href="https://richard-guofeng-zhang.github.io" target="_blank" style="text-decoration: none;"><b>Guofeng Zhang</b></a> &emsp;
                 <a href="https://wufeim.github.io" target="_blank" style="text-decoration: none;"><b>Wufei Ma</b></a> &emsp;
                 <a href="https://www.cs.jhu.edu/~ayuille/" target="_blank" style="text-decoration: none;"><b>Alan Yuille</b></a> &emsp;
                 <br>
-                <br>
                 <a href="https://www.jhu.edu" target="_blank" style="text-decoration: none;">Johns Hopkins University</a> &emsp;
               </p>
               <div class="button-container">
                 <a href="https://arxiv.org/abs/2503.20220" class="button" target="_blank">arXiv</a>
-                <!-- <a href="#" class="button" target="_blank">Code (by June)</a> -->
-                <!-- <a href="#" class="button">Code (by June)</a> -->
+                <a href="https://github.com/ccvl/DINeMo" class="button">Code (by Jun 13)</a>
               </div>
             </div>
         </div>
@@ -89,6 +87,9 @@
         <d-contents style="margin-top: 0px;">
             <nav>
                 <h4>Contents</h4>
+                <div><a href="#method">DINeMo</a></div>
+                <div><a href="#results">Main Results</a></div>
+                <div><a href="#qualitative">Qualitative Examples</a></div>
                 <!-- <div><a href="#key">Key Findings</a></div>
                 <div><a href="#eval">3D Spatial Reasoning</a></div>
                 <div><a href="#method">SpatialLMM</a></div>
@@ -98,34 +99,123 @@
         </d-contents>
 
         <p style="text-align: justify;">
-            We present DINeMo, a novel neural mesh model that is trained with no 3D annotations by leveraging pseudo-correspondence obtained from large visual foundation models.
+            In this work, we present <b>DINeMo</b>, a novel neural mesh model that is trained with no 3D annotations by leveraging pseudo-correspondence obtained from large visual foundation models. We adopt a bidirectional pseudo-correspondence generation method, which produce pseudo correspondence utilizing both local appearance features and global context information.
         </p>
-        <d-figure>
-            <figure>
-                <img src="assets/images/teaser_dino.jpg" alt="DINeMo overview" style="max-height: 420px; object-fit: contain;">
-                <figcaption>
-                    <b>Figure 1.</b> Overview of our DINeMo model.
-                </figcaption>
-            </figure>
-        </d-figure>
+        <p style="text-align: justify;">
+            Experimental results on car datasets demonstrate that our DINeMo outperforms previous zero- and few-shot 3D pose estimation by a wide margin, narrowing the gap with fully-supervised methods by 67.3%. Our DINeMo also scales effectively and efficiently when incorporating more unlabeled images, which demonstrate the advantages over supervised learning methods that rely on 3D annotations.
+        </p>
 
-        <d-figure>
-            <figure>
-                <img src="assets/images/bidirectional.jpg" alt="DINeMo overview" style="max-height: 280px; object-fit: contain;">
-                <figcaption>
-                    <b>Figure 2.</b> Bidirectional pseudo-correspondence generation.
-                </figcaption>
-            </figure>
-        </d-figure>
+        <section id="method">
+            <h2 id="method">DINeMo</h2>
+            <p style="text-align: justify;">
+                <b>Preliminaries.</b> Neural mesh models <d-cite key="ma2022robust,jesslen2024novum,wang2021nemo"></d-cite> define a probabilistic generative model of feature activations using a 3D neural mesh <d-math>$\mathfrak{N} = \{\mathcal{V}, \mathcal{E}, \mathcal{C}\}$</d-math> with vertices <d-math>V</d-math>, edge set <d-math>\mathcal{E}</d-math>, and vertex-level features <d-math>\mathcal{C}</d-math>. Given pose <d-math>m</d-math>, we define the likelihood of a target feature map <d-math>F</d-math> as
+            </p>
+            <d-math block>
+                p(F \mid \mathfrak{N}, m, C_b) = \prod_{i \in \mathcal{FG}} p(f_i \mid \mathfrak{N}, m) \prod_{i' \in \mathcal{BG}} p(f_{i'} \mid C_b)
+            </d-math>
+            <p style="text-align: justify;">
+                This allows us to predict object category <d-cite key="jesslen2024novum"></d-cite>, 3D/6D object poses <d-cite key="ma2022robust,wang2021nemo"></d-cite>, and object shape from an analysis-by-synthesis approach. Neural mesh models are often trained with part-contrastive loss with vertex correspondence lables, which are often obtained from 3D pose annotations in PASCAL3D+ <d-cite key="xiang2014beyond"></d-cite> or ImageNet3D <d-cite key="ma2024imagenet3d"></d-cite>.
+            </p>
+            <p style="text-align: justify;">
+                <b>Our approach.</b> Our goal is to exploit pseudo-correspondence obtained from large visual foundation models, such as DINOv2 <d-cite key="oquab2023dinov2"></d-cite>. Given object images without 3D annotations, we first generate pseudo-vertex-correspondence from a pretrained SD-DINO model <d-cite key="zhang2023tale"></d-cite> using our <i>bidirectional pseudo-correspondence generation</i>. Then we train our DINeMo model with part correspondence loss on car images from standard 3D pose estimation dataset <d-cite key="xiang2014beyond"></d-cite> or abundant unannotated images from the Internet, <i>e.g.</i>, from the StanfordCars dataset <d-cite key="stanfordcars"></d-cite>.
+            </p>
+            <d-figure>
+                <figure>
+                    <img src="assets/images/teaser_dino.jpg" alt="DINeMo overview" style="max-height: 360px; object-fit: contain;">
+                    <figcaption>
+                        <b>Figure 1.</b> Overview of our DINeMo model.
+                    </figcaption>
+                </figure>
+            </d-figure>
+            <p style="text-align: justify;">
+                <b>Bidirectional pseudo-correspondence generation.</b> We find that raw pseudo-correspondence can be quite noisy, <i>e.g.</i>, keypoints are often mismatched between left and right. We argue that keypoint correspondence matching should consider both local information, <i>i.e.</i>, per patch feature similarities, and global context information, <i>i.e.</i>, 3D orientation of the object. Based on this motivation, we propose a novel bidirectional pseudo-correspondence generation, which consists of two steps: (i) matching a global pose label from raw keypoint correspondences, and (ii) refine local keypoint correspondences based on the predicted global pose label.
+            </p>
+            <d-figure>
+                <figure>
+                    <img src="assets/images/bidirectional.jpg" alt="DINeMo overview" style="max-height: 240px; object-fit: contain;">
+                    <figcaption>
+                        <b>Figure 2.</b> Bidirectional pseudo-correspondence generation.
+                    </figcaption>
+                </figure>
+            </d-figure>
+            <p style="text-align: justify;">
+                <b>Occlusion-aware analysis-by-synthesis.</b> Previous neural mesh models adopt explicit occlusion reasoning during inference. However, directly predicting occlusion from neural features yields noisy masks and hurts final performance. With the recent rise of foundation models like Segment Anything <d-cite key="kirillov2023segment"></d-cite>, we extend standard analysis-by-synthesis inference with Grounded-SAM <d-cite key="ren2024grounded"></d-cite> masks, achieving enhanced occlusion robustness.
+            </p>
+        </section>
 
-        <d-figure>
-            <figure>
-                <img src="assets/images/inferred_pose_labeled.jpg" alt="DINeMo overview" style="max-height: 280px; object-fit: contain;">
-                <figcaption>
-                    <b>Figure 3.</b> Qualitative comparisons with and without our bidirectional pseudo-correspondence generation.
-                </figcaption>
-            </figure>
-        </d-figure>
+        <section id="results">
+            <h2 id="results">Main Results</h2>
+            <p style="text-align: justify;">
+                <b>3D object pose estimation on the car split of Pascal3D+ and occluded PASCAL3D+.</b>
+                <d-figure>
+                    <figure>
+                        <img src="assets/images/results_pose.png" alt="DINeMo overview" style="max-height: 200px; object-fit: contain;">
+                        <figcaption>
+                            <b>Figure 3.</b> 3D object pose estimation on the car split of Pascal3D+ and occluded PASCAL3D+.
+                        </figcaption>
+                    </figure>
+                </d-figure>
+            </p>
+            <p style="text-align: justify;">
+                <b>Semantic correspondence evaluation on car split of SPair71k.</b> Our DINeMo outperforms all previous methods by a wide margin and achieves comparable performance with Telling Left from Right <d-cite key="Zhang_2024_CVPR"></d-cite> that use index to flip source keypoints at test time.
+                <d-figure>
+                    <figure>
+                        <img src="assets/images/correspondence.png" alt="DINeMo overview" style="max-height: 160px; object-fit: contain;">
+                        <figcaption>
+                            <b>Figure 4.</b> Semantic correspondence evaluation on car split of SPair71k.
+                        </figcaption>
+                    </figure>
+                </d-figure>
+            </p>
+            <p style="text-align: justify;">
+                <b>Scaling properties of DINeMo with more unlabled object images used for training.</b>
+                <d-figure>
+                    <figure>
+                        <img src="assets/images/scaling.png" alt="DINeMo overview" style="max-height: 240px; object-fit: contain;">
+                        <figcaption>
+                            <b>Figure 5.</b> Scaling properties of DINeMo with more unlabled object images used for training.
+                        </figcaption>
+                    </figure>
+                </d-figure>
+            </p>
+        </section>
+
+        <section id="qualitative">
+            <h2 id="qualitative">Qualitative Examples</h2>
+            <p style="text-align: justify;">
+                <b>Qualitative comparisons with and without our bidirectional pseudo-correspondence generation.</b>
+            </p>
+            <d-figure>
+                <figure>
+                    <img src="assets/images/inferred_pose_labeled.jpg" alt="DINeMo overview" style="max-height: 240px; object-fit: contain;">
+                    <figcaption>
+                        <b>Figure 6.</b> Qualitative comparisons with and without our bidirectional pseudo-correspondence generation.
+                    </figcaption>
+                </figure>
+            </d-figure>
+            <p style="text-align: justify;">
+                <b>Qualitative comparisons between DINOv2 and our DINeMo on SPair71k dataset.</b>
+            </p>
+            <d-figure>
+                <figure>
+                    <img src="assets/images/Semantic_corr_qualitative.jpg" alt="DINeMo overview" style="max-height: 400px; object-fit: contain;">
+                    <figcaption>
+                        <b>Figure 7.</b> Qualitative comparisons between DINOv2 and our DINeMo on SPair71k dataset.
+                    </figcaption>
+                </figure>
+            </d-figure>
+            <p style="text-align: justify;">
+                <b>Qualitative pose estimation results on PASCAL3D+ dataset.</b>
+            </p>
+            <d-figure>
+                <figure>
+                    <img src="assets/images/pose_qualitative.jpg" alt="DINeMo overview" style="max-height: 160px; object-fit: contain;">
+                    <figcaption>
+                        <b>Figure 8.</b> Qualitative pose estimation results on PASCAL3D+ dataset.
+                    </figcaption>
+                </figure>
+            </d-figure>
+        </section>
 
         <!-- <section id="key">
             <h2 id="key">Key Findings</h2>
@@ -549,11 +639,11 @@
         <d-appendix>
             <h3>BibTeX</h3>
             <p class="bibtex">
-                @article{guo2025dinemo,
-                &nbsp;&nbsp;title={DINeMo: Learning Neural Mesh Models with no 3D Annotations},
-                &nbsp;&nbsp;author={Guo, Weijie and Zhang, Guofeng and Ma, Wufei and Yuille, Alan},
-                &nbsp;&nbsp;journal={arXiv preprint arXiv:2412.07825},
-                &nbsp;&nbsp;year={2025}
+                @article{guo2025dinemo,<br>
+                &nbsp;&nbsp;title={DINeMo: Learning Neural Mesh Models with no 3D Annotations},<br>
+                &nbsp;&nbsp;author={Guo, Weijie and Zhang, Guofeng and Ma, Wufei and Yuille, Alan},<br>
+                &nbsp;&nbsp;journal={arXiv preprint arXiv:2412.07825},<br>
+                &nbsp;&nbsp;year={2025}<br>
                 }
             </p>
 
